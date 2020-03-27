@@ -1,0 +1,9 @@
+{
+    "author" : ["MeafQ"],
+    "install_msg" : "**Используйте `[p]bumpreward`.**",
+    "name" : "BumpReward",
+    "short" : "Награда за bump сервера.",
+    "description" : "Зачисление валюты, награды пользователю за bump сервера на мониторингах",
+    "tags" : ["reward", "economy", "bump"],
+    "requirements": ["humanize"]
+}
