@@ -1,10 +1,42 @@
 import re
 import discord
 from datetime import datetime, timedelta
+from redbot.core.utils.chat_formatting import box
 from .settings import *
 from functools import reduce
 import operator
 
+
+def get_leaderboard(guild, storage, author=None):
+    balance_len = len(str(storage[0][1]))
+    pound_len = len(str(len(storage)))
+
+    header = f"{'#':{pound_len + 4}}{'Счет':{balance_len + 5}}{'Имя':2}\n"
+
+    pages = []
+    author_page = 0
+    temp_page = header
+    i = 1
+    for user_id, balance in storage:
+        user_id = int(user_id)
+
+        if user_id != getattr(author, "id", None):
+            name = guild.get_member(user_id).display_name
+        else:
+            author_page = i // 10
+            name = f"<<{author.display_name}>>"
+
+        temp_page += f"{f'{i}.': <{pound_len + 3}} {balance: <{balance_len + 4}} {name}\n"
+
+        if i % 10 == 0:
+            pages.append(box(temp_page, lang="md"))
+            temp_page = header
+        i += 1
+
+    if temp_page != header:
+        pages.append(box(temp_page, lang="md"))
+        
+    return pages, author_page
 
 def set_bots_permissions(obj_bots, overwrites = {}):
     for bot in obj_bots:
@@ -34,7 +66,6 @@ def sort_commands(bots):
         i += 1
     return temp
 
-
 def get_from_dict(data_dict, map_list):
     try:
         return reduce(operator.getitem, map_list, data_dict)
@@ -43,6 +74,13 @@ def get_from_dict(data_dict, map_list):
 
 def set_in_dict(data_dict, map_list, value):
     get_from_dict(data_dict, map_list[:-1])[map_list[-1]] = value
+
+async def add_reaction(ctx, emoji = "✅"):
+    try:
+        await ctx.message.add_reaction(emoji)
+    except discord.NotFound:
+        pass
+
 
 def get_message_type(embed, parsers):
     for key, value in parsers.items():
