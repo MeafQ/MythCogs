@@ -25,10 +25,8 @@ BOTS = {
         },
         "cooldown": 240,
         "command": "s.up",
-    }
-}
-
-BOTS["460129825211023371"] = {
+    },
+    "460129825211023371" : {
     "parser": {
         "cooldown": [SHORT_PATTERN, ["description"]],
         "success": [ID_PATTERN, ["description"]],
@@ -36,13 +34,16 @@ BOTS["460129825211023371"] = {
     },
     "cooldown": 1,
     "command": "!bumptest",
+    },
+    "682523766877716493" : {
+        "parser": {
+            "cooldown": [SHORT_PATTERN, ["author", "name"]],
+            "success": [NAME_PATTERN, ["footer", "text"]]
+        },
+        "cooldown": 1,
+        "command": "!uptest",
+    }
 }
 
-BOTS["682523766877716493"] = {
-    "parser": {
-        "cooldown": [SHORT_PATTERN, ["author", "name"]],
-        "success": [NAME_PATTERN, ["footer", "text"]]
-    },
-    "cooldown": 240,
-    "command": "s.up",
-}
+
+

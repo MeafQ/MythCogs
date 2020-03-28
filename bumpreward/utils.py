@@ -85,6 +85,7 @@ async def add_reaction(ctx, emoji = "✅"):
 def get_message_type(embed, parsers):
     for key, value in parsers.items():
         string = get_from_dict(embed.to_dict(), value[1])
+        print(string)
         if string is not None:
             result = re.search(value[0], string.lower())
             if result:

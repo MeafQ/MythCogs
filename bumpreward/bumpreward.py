@@ -223,7 +223,7 @@ class BumpReward(commands.Cog):
                         self.update_task(guild)
                     except UnknownType:
                         log.critical("Bot_ID: %s\nEncountered unknown message type: %s" % (bot_id, embed.to_dict()))
-                
+        await asyncio.sleep(1)
         await ctx.delete()
 
 

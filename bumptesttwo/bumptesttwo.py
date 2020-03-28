@@ -64,7 +64,7 @@ class BumpTestTwo(commands.Cog):
                 formatted = strfdelta(timeleft, "%H:%M:%S")
                 embed = discord.Embed(timestamp=datetime.now())
                 embed.set_author(name="🕜 %s до следующего Up" % formatted)
-                embed.set_footer(text=ctx.author.display_name)
+                embed.set_footer(text=ctx.author.name + "#" + ctx.author.discriminator)
                 await ctx.send(embed=embed)
         except asyncio.TimeoutError:
             pass
