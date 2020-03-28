@@ -31,7 +31,7 @@ def strfdelta(tdelta, fmt):
     return t.substitute(**d)
 
 
-class BumpTest(commands.Cog):
+class BumpTestTwo(commands.Cog):
     """
     Тестовая имитация bump бота.
     **Используйте `[p]bumptest`.**
@@ -46,7 +46,7 @@ class BumpTest(commands.Cog):
     
     @commands.command()
     @commands.guild_only()
-    async def bumptest(self, ctx):
+    async def uptest(self, ctx):
         """
         Тестовая имитация bump бота.
         """
@@ -56,21 +56,15 @@ class BumpTest(commands.Cog):
             timeleft = get_seconds_left(self.end_date)
             ended = timeleft.total_seconds() <= 0
             if ended:
-                formatted = date.strftime(self.end_date, '%H:%M:%S')
-                embed = discord.Embed(description="**Write the code from the image** `(Example:  1234)`")
-                embed.set_image(url="https://media.discordapp.net/attachments/672872362953146370/690599775287902329/WPbRpNcyDwdiSd0dCuaX.png")
-                await ctx.send(embed=embed)
-                
-                predicate = MessagePredicate.equal_to("8409", ctx)
-                await self.bot.wait_for("message", timeout=30, check=predicate)
-                embed = discord.Embed(title="Top Discord Servers", url="https://discordapp.com",
-                    description="Server bumped by %s :thumbsup:\r[+1 Bonus point]" % ctx.author.mention)
+                embed = discord.Embed(timestamp=datetime.now(), title="Сервер Up", description="Нравится сервер?\nОцени его на **сайте**!")
+                embed.set_footer(text=ctx.author.name + "#" + ctx.author.discriminator)
                 await ctx.send(embed=embed)
                 self.end_date = get_end_date(1)
             else:
                 formatted = strfdelta(timeleft, "%H:%M:%S")
-                embed = discord.Embed(description=":alarm_clock: The next Bump for this server will be available in %s \
-                    \r :arrows_counterclockwise: The next Bump for your account will be available in 23:59:59" % formatted)
+                embed = discord.Embed(timestamp=datetime.now())
+                embed.set_author(name="🕜 %s до следующего Up" % formatted)
+                embed.set_footer(text=ctx.author.display_name)
                 await ctx.send(embed=embed)
         except asyncio.TimeoutError:
             pass

@@ -1,0 +1,8 @@
+{
+    "author" : ["MeafQ"],
+    "install_msg" : "**Используйте `[p]uptest`.**",
+    "name" : "BumpTestTwo",
+    "short" : "Тестовая имитация bump бота.",
+    "description" : "Тестовая имитация bump бота для сервисов мониторингов.",
+    "tags" : ["test", "bump"]
+}
