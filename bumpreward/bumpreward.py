@@ -190,8 +190,11 @@ class BumpReward(commands.Cog):
         if channel.type.value != 0:
             return
         guild = ctx.guild
-        if channel != self.cache[guild.id]["channel"]:
-            return
+        try:
+            if channel != self.cache[guild.id]["channel"]:
+                return
+        except KeyError:
+            pass
         author = ctx.author
         if author.bot:
             if author == self.bot.user and self.cache[guild.id]["waiting"]:
