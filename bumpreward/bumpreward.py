@@ -149,6 +149,8 @@ class BumpReward(commands.Cog):
             if old_storage[i][0] == user.id:
                 if amount != 0:
                     amount = max(old_storage[i][1] + amount, 0)
+                elif self.cache[guild.id]["amount"] == 0:
+                    return
                 old_storage[i][1] = amount
                 break
         else:
