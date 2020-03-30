@@ -194,7 +194,7 @@ class BumpReward(commands.Cog):
             if channel != self.cache[guild.id]["channel"]:
                 return
         except KeyError:
-            pass
+            return
         author = ctx.author
         if author.bot:
             if author == self.bot.user and self.cache[guild.id]["waiting"]:
