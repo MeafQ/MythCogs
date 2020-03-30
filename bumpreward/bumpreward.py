@@ -5,7 +5,6 @@ from discord.utils import get
 from redbot.core import Config, checks, bank, commands
 from redbot.core.data_manager import bundled_data_path
 from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
-#https://github.com/Cog-Creators/Red-DiscordBot/blob/eedec4ff02f717ae028678c8e25d05511b0a7f0e/redbot/cogs/economy/economy.py
 from redbot.core.bot import Red
 import logging
 import humanize
@@ -244,6 +243,7 @@ class BumpReward(commands.Cog):
         else:
             embed = get_embed(message)
 
+
         if user is not None:
             embed.set_footer(text=user.display_name, icon_url=user.avatar_url)
         else:
@@ -274,17 +274,18 @@ class BumpReward(commands.Cog):
                 except IndexError:
                     embed.add_field(name=name, value=text, inline=True)
             commands = not_finished
-            
             try:
                 await message.edit(embed=embed, suppress=False)
+                print("Edit Message")
             except (discord.HTTPException, AttributeError):
                 self.cache[guild.id]["waiting"] = True
                 storage = await self.config.guild(guild).balance()
-                embed.description = get_leaderboard(guild, storage[:10])[0][0]
+                if storage:
+                    embed.description = get_leaderboard(guild, storage)[0][0]
                 message = await channel.send(embed=embed)
                 await self.set_config(guild, "message", value=message)
 
-            await asyncio.sleep(DELAY)   # TODO Сделать чтоб считало точнее
+            await asyncio.sleep(DELAY)
 
 
     async def set_channel_send_messages(self, guild, channel, lock):
