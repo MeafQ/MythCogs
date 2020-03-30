@@ -37,7 +37,7 @@ class BumpReward(commands.Cog):
     **Используйте `[p]bumpreward`.**
     """
     __author__ = "MeafQ"
-    __version__ = "1.1.0" 
+    __version__ = "1.1.1" 
 
     def __init__(self, bot: Red):
         humanize.i18n.activate("ru_MY", path=str(bundled_data_path(self)))
@@ -168,6 +168,9 @@ class BumpReward(commands.Cog):
     @commands.cooldown(rate=2, per=300, type=commands.BucketType.user)
     @bumpreward.command()
     async def balance(self, ctx, author: discord.Member = None):
+        """
+        Список баланса пользователей.
+        """
         if author is None:
             author = ctx.author
         guild = ctx.guild
@@ -224,7 +227,10 @@ class BumpReward(commands.Cog):
                     except UnknownType:
                         log.critical("Bot_ID: %s\nEncountered unknown message type: %s" % (bot_id, embed.to_dict()))
         await asyncio.sleep(1)
-        await ctx.delete()
+        try:
+            await ctx.delete()
+        except discord.NotFound:
+            pass
 
 
     async def message_task(self, guild):
@@ -279,7 +285,6 @@ class BumpReward(commands.Cog):
                 await self.set_config(guild, "message", value=message)
 
             await asyncio.sleep(DELAY)   # TODO Сделать чтоб считало точнее
-        print("Task Ended")
 
 
     async def set_channel_send_messages(self, guild, channel, lock):
