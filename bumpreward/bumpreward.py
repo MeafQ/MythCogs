@@ -276,7 +276,6 @@ class BumpReward(commands.Cog):
             commands = not_finished
             try:
                 await message.edit(embed=embed, suppress=False)
-                print("Edit Message")
             except (discord.HTTPException, AttributeError):
                 self.cache[guild.id]["waiting"] = True
                 storage = await self.config.guild(guild).balance()
