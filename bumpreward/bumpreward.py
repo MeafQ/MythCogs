@@ -286,6 +286,7 @@ class BumpReward(commands.Cog):
                 await self.set_config(guild, "message", value=message)
 
             await asyncio.sleep(DELAY)
+            embed = get_embed(message)
 
 
     async def set_channel_send_messages(self, guild, channel, lock):
