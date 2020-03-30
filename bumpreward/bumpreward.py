@@ -301,20 +301,26 @@ class BumpReward(commands.Cog):
         self.cache[guild.id]["permission"] = lock
 
     def captcha_task(self, guild, bot_id, ctx):
-        self.cache[guild.id]["captcha"][bot_id] = ctx
+        self.cache[guild.id]["captcha"].setdefault(bot_id, []).append(ctx)
         async def captcha_delay(self, guild, bot_id):
             await asyncio.sleep(CAPTCHA_DELAY)
-            await self.captcha_checker(guild, bot_id)
+            if ctx in self.cache[guild.id]["captcha"][bot_id]:
+                self.cache[guild.id]["captcha"][bot_id].remove(ctx)
+                try:
+                    await ctx.delete()
+                except discord.NotFound:
+                    pass
         self.bot.loop.create_task(captcha_delay(self, guild, bot_id))
 
     async def captcha_checker(self, guild, bot_id):
-        captcha = self.cache[guild.id]["captcha"].get(bot_id)
-        if captcha is not None:
-            try:
-                await captcha.delete()
-            except discord.NotFound:
-                pass
-            del self.cache[guild.id]["captcha"][bot_id]
+        captcha = self.cache[guild.id]["captcha"].get(bot_id, [])
+        if captcha:
+            for message in captcha:
+                try:
+                    await message.delete()
+                except discord.NotFound:
+                    pass
+            self.cache[guild.id]["captcha"][bot_id] = []
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):

@@ -62,7 +62,7 @@ class BumpTest(commands.Cog):
                 await ctx.send(embed=embed)
                 
                 predicate = MessagePredicate.equal_to("8409", ctx)
-                await self.bot.wait_for("message", timeout=30, check=predicate)
+                await self.bot.wait_for("message", timeout=15, check=predicate)
                 embed = discord.Embed(title="Top Discord Servers", url="https://discordapp.com",
                     description="Server bumped by %s :thumbsup:\r[+1 Bonus point]" % ctx.author.mention)
                 await ctx.send(embed=embed)
