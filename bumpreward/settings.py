@@ -13,7 +13,7 @@ BOTS = {
         "parser": {
             "cooldown": [SHORT_PATTERN, ["description"]],
             "success": [ID_PATTERN, ["description"]],
-            "captcha": ["write the code", ["description"]]
+            "captcha": ["(?i)write the code", ["description"]]
         },
         "cooldown": 240,
         "command": "!bump",
@@ -25,23 +25,6 @@ BOTS = {
         },
         "cooldown": 240,
         "command": "s.up",
-    },
-    "460129825211023371" : {
-    "parser": {
-        "cooldown": [SHORT_PATTERN, ["description"]],
-        "success": [ID_PATTERN, ["description"]],
-        "captcha": ["write the code", ["description"]]
-    },
-    "cooldown": 1,
-    "command": "!bumptest",
-    },
-    "682523766877716493" : {
-        "parser": {
-            "cooldown": [SHORT_PATTERN, ["author", "name"]],
-            "success": [NAME_PATTERN, ["footer", "text"]]
-        },
-        "cooldown": 1,
-        "command": "!uptest",
     }
 }
 
