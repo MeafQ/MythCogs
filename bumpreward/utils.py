@@ -38,11 +38,6 @@ def get_leaderboard(guild, storage, author=None):
         
     return pages, author_page
 
-def set_bots_permissions(obj_bots, overwrites = {}):
-    for bot in obj_bots:
-        overwrites[bot] = discord.PermissionOverwrite(read_messages=True, send_messages=True, embed_links=True, attach_files=True)
-    return overwrites
-
 def get_end_date(hours=0, minutes=0, seconds=0):
     time = timedelta(hours=hours, minutes=minutes, seconds=seconds)
     now = datetime.now()
@@ -81,14 +76,20 @@ async def add_reaction(ctx, emoji = "✅"):
     except discord.NotFound:
         pass
 
-
-def get_message_type(embed, parsers):
+def get_embed_type(embed, parsers):
     for key, value in parsers.items():
         string = get_from_dict(embed.to_dict(), value[1])
         if string is not None:
             result = re.search(value[0], string)
             if result:
                 return key, result.groups()
+    raise UnknownType
+
+def get_normal_type(string, parsers):
+    for key, value in parsers.items():
+        result = re.search(value, string)
+        if result:
+            return key, result.groups()
     raise UnknownType
 
 def get_embed(message):
@@ -111,9 +112,9 @@ async def get_message(channel, message_id):   # TODO Тоже самое
             pass
     return None
 
-async def clear_channel(guild, channel, message_id=None):
+async def clear_channel(guild, channel, message):
     def is_not_msg(m):
-        return m.id != message_id
+        return m != message
     try:
         await channel.purge(check=is_not_msg)
     except discord.NotFound:
