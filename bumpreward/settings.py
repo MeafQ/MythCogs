@@ -15,6 +15,7 @@ BOTS = {
         },
         "cooldown": 240,
         "command": "!bump",
+        "captchas": []
     },
     "464272403766444044": {
         "embed": {
@@ -22,10 +23,11 @@ BOTS = {
             "success": [NAME_PATTERN, ["footer", "text"]]
         },
         "normal": {
-            "captcha": "(?i)write the code"
+            "captcha": "(?i)введите код"
         },
         "cooldown": 240,
         "command": "s.up",
+        "captchas": []
     }
 }
 
