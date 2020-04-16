@@ -14,8 +14,7 @@ BOTS = {
             "captcha": ["(?i)write the code", ["description"]]
         },
         "cooldown": 240,
-        "command": "!bump",
-        "captchas": []
+        "command": "!bump"
     },
     "464272403766444044": {
         "embed": {
@@ -26,8 +25,7 @@ BOTS = {
             "captcha": "(?i)введите код"
         },
         "cooldown": 240,
-        "command": "s.up",
-        "captchas": []
+        "command": "s.up"
     }
 }
 

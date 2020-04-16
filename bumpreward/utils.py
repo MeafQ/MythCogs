@@ -46,19 +46,21 @@ def get_end_date(hours=0, minutes=0, seconds=0):
     return formatted
 
 def get_cooldown(end_date):
-    if end_date is not None:
-        end_date = datetime.strptime(end_date, '%Y/%m/%d %H:%M:%S')
-        now = datetime.now()
-        time_left = end_date - now
-        return time_left.total_seconds()
-    return None
+    end_date = datetime.strptime(end_date, '%Y/%m/%d %H:%M:%S')
+    now = datetime.now()
+    time_left = end_date - now
+    return time_left.total_seconds()
 
-def sort_commands(bots):
+def get_commands(bots):
     temp = {}
-    i = 0
+    index = 0
     for bot_id, end_date in bots.items():
-        temp[i] = {"name": BOTS[bot_id]["command"], "cooldown": get_cooldown(end_date)}
-        i += 1
+        temp[bot_id] = {
+            "index": index,
+            "name": BOTS[bot_id]["command"],
+            "cooldown": get_cooldown(end_date) if end_date is not None else 0
+        }
+        index += 1
     return temp
 
 def get_from_dict(data_dict, map_list):
@@ -76,20 +78,20 @@ async def add_reaction(ctx, emoji = "✅"):
     except discord.NotFound:
         pass
 
-def get_embed_type(embed, parsers):
-    for key, value in parsers.items():
-        string = get_from_dict(embed.to_dict(), value[1])
-        if string is not None:
-            result = re.search(value[0], string)
+def get_message_type(ctx, bot_id):
+    embed = get_embed(ctx)
+    if embed is None:
+        for key, value in BOTS[bot_id]["normal"].items():
+            result = re.search(value, ctx.description)
             if result:
                 return key, result.groups()
-    raise UnknownType
-
-def get_normal_type(string, parsers):
-    for key, value in parsers.items():
-        result = re.search(value, string)
-        if result:
-            return key, result.groups()
+    else:
+        for key, value in BOTS[bot_id]["embed"].items():
+            string = get_from_dict(embed.to_dict(), value[1])
+            if string is not None:
+                result = re.search(value[0], string)
+                if result:
+                    return key, result.groups()
     raise UnknownType
 
 def get_embed(message):
@@ -104,7 +106,7 @@ def get_member(guild, string):
     except ValueError:
         return guild.get_member_named(string)
 
-async def get_message(channel, message_id):   # TODO Тоже самое
+async def get_message(channel, message_id):
     if message_id is not None:
         try:
             return await channel.fetch_message(message_id)
@@ -124,5 +126,22 @@ async def send_embed(channel, text):
     embed = discord.Embed(description=text)
     await channel.send(embed=embed)
 
+async def message_delete(message, delay=None):
+    try:
+        await message.delete(delay=delay)
+    except discord.NotFound:
+        pass
+
+async def channel_send_messages(guild, channel, lock):
+    overwrite = channel.overwrites_for(guild.default_role)
+    if overwrite.send_messages != lock:
+        overwrite.send_messages = lock
+        await channel.set_permissions(guild.default_role, overwrite=overwrite)
+
+# def set_field_at()
+
 class UnknownType(Exception):
+    pass
+
+class UnknownUser(Exception):
     pass
