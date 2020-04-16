@@ -161,7 +161,7 @@ class BumpReward(commands.Cog):
         message = self.cache[guild.id]["message"]
         embed = get_embed(message)
         if new_storage:
-            embed.description = get_leaderboard(guild, new_storage[:10])[0][0]
+            embed.description = get_leaderboard(guild, new_storage, first=True, page=10)
         await message.edit(embed=embed)
 
         await self.config.guild(guild).balance.set(new_storage)

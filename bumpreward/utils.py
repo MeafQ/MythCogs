@@ -7,7 +7,7 @@ from functools import reduce
 import operator
 
 
-def get_leaderboard(guild, storage, author=None):
+def get_leaderboard(guild, storage, author=None, page=10, first=False):
     balance_len = len(str(storage[0][1]))
     pound_len = len(str(len(storage)))
 
@@ -31,7 +31,10 @@ def get_leaderboard(guild, storage, author=None):
 
         temp_page += f"{f'{i}.': <{pound_len + 3}} {balance: <{balance_len + 4}} {name}\n"
 
-        if i % 10 == 0:
+        if i % page == 0:
+            if first:
+                return box(temp_page, lang="md")
+
             pages.append(box(temp_page, lang="md"))
             temp_page = header
         i += 1
