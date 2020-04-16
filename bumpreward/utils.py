@@ -20,8 +20,11 @@ def get_leaderboard(guild, storage, author=None):
     for user_id, balance in storage:
         user_id = int(user_id)
 
-        if user_id != getattr(author, "id", None):
-            name = guild.get_member(user_id).display_name
+        if user_id != getattr(author, "id"):
+            user = guild.get_member(user_id)
+            if user is None:
+                continue
+            name = user.display_name
         else:
             author_page = i // 10
             name = f"<<{author.display_name}>>"
