@@ -8,6 +8,7 @@ CAPTCHA_DELAY = 15
 
 BOTS = {
     "315926021457051650": {
+        "index": 1,
         "embed": {
             "cooldown": [SHORT_PATTERN, ["description"]],
             "success": [ID_PATTERN, ["description"]],
@@ -17,6 +18,7 @@ BOTS = {
         "command": "!bump"
     },
     "464272403766444044": {
+        "index": 2,
         "embed": {
             "cooldown": [SHORT_PATTERN, ["author", "name"]],
             "success": [NAME_PATTERN, ["footer", "text"]]
