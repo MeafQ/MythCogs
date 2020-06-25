@@ -127,7 +127,7 @@ class BumpReward(commands.Cog):
         await menu(ctx, pages, DEFAULT_CONTROLS, page=author_page, timeout=15)
 
     def wait_captcha(self, guild, bot_id, message):
-        captchas = self.cache[guild.id]["bots"][bot_id]["captchas"]
+        captchas = self.cache[guild.id]["captchas"][bot_id]
         captchas.append(message)
         async def captcha_delay(self, guild, bot_id):
             await asyncio.sleep(CAPTCHA_DELAY)
@@ -137,36 +137,67 @@ class BumpReward(commands.Cog):
         self.bot.loop.create_task(captcha_delay(self, guild, bot_id))
 
     async def clear_captchas(self, guild, bot_id):
-        captchas = self.cache[guild.id]["bots"][bot_id]["captchas"]
+        captchas = self.cache[guild.id]["captchas"][bot_id]
         for message in captchas:
             await safe_message_delete(message)
         captchas.clear()
+
+    def restart_task(self, guild, message):
+        self.cache[guild.id]["task"].cancel()
+        self.cache[guild.id]["task"] = self.bot.loop.create_task(self.message_task(guild, message))
+
+    def start_task(self, guild, message, bots):
+        self.cache[guild.id] = {
+            "message": message,
+
+            "bots": strptime_dates(bots),
+            "captchas": dict.fromkeys(bots, []),
+            "task": self.bot.loop.create_task(self.message_task(guild, message)),
+
+            "waiting": False,
+            "lock": False
+        }
+
+    def stop_task(self, guild):
+        self.cache[guild.id]["task"].cancel()
+        del self.cache[guild.id]
+
+    async def config_reset(self, guild):
+        await self.config.guild(guild).channel.set(None)
+        await self.config.guild(guild).message.set(None)
+        await self.config.guild(guild).bots.set({})
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):
         guild = channel.guild
         if guild.id in self.cache:
             if channel == self.cache[guild.id]["channel"]:
-                await self.guild_reset(guild)
+                await self.config_reset(guild)
+                self.stop_task(guild)
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
         if guild.id in self.cache:
-            await self.guild_reset(guild)
+            await self.config_reset(guild)
+            self.stop_task(guild)
 
-    async def guild_reset(self, guild):
-        await self.config.guild(guild).channel.set(None)
-        await self.config.guild(guild).message.set(None)
-        await self.config.guild(guild).bots.set({})
-        self.cache[guild.id]["task"].cancel()
-        del self.cache[guild.id] # TODO Возможно надо иначе
+    async def init(self):
+        await self.bot.wait_until_ready()
+        for guild in self.bot.guilds:
+            config = await self.config.guild(guild)()
+        
+            channel_id = config["channel"]
+            if channel_id is None:
+                continue
 
-    # async def set_config(self, guild, *key, value):
-    #     await self.config.guild(guild).set_raw(*key, value=getattr(value, "id", default=value))
-    #     set_in_dict(self.cache[guild.id], key, value)
+            channel = guild.get_channel(channel_id)
+            if channel is None:
+                await self.config_reset(guild)
+            else:
+                message = await safe_get_message(channel, config["message"])
+                await clear_channel(channel, message)
 
-
-
+                self.start_task(guild, message, config["bots"])
 
     @commands.admin()
     @bumpreward.command()
@@ -179,128 +210,117 @@ class BumpReward(commands.Cog):
             message = self.cache[guild.id]["message"]
             await message.channel.delete()
 
+        bots = {}
         for bot_id in BOTS:
-            guild.get_member()
+            bot = guild.get_member(int(bot_id))
+            if bot is not None:
+                bots[bot_id] = datetime.now()
+        if not bots:
+            await send_simple_embed(ctx, MSG_NO_BOTS)
+            return
+        await self.config.guild(guild).bots.set(bots)
 
         channel = await guild.create_text_channel("BUMPREWARD")
         await self.config.guild(guild).channel.set(channel.id)
-
-        # TODO Нужно создавать кеш
-        await self.create_message(guild, channel)
-
+        
+        message = await self.create_message(guild, channel, bots)
+        await self.config.guild(guild).message.set(message.id)
+        
         await add_reaction(ctx)
 
-    async def process_cooldowns(self, guild, embed):
-        finished = 0
+    async def create_message(self, guild, channel, bots):
+        embed = discord.Embed()
+        storage = await self.config.guild(guild).balance()
+        if storage:
+            embed.description = get_leaderboard(guild, storage)
+
+        message = await channel.send(embed=embed)
+        self.start_task(guild, message, bots)
+        return message
+
+    async def safe_edit_message(self, guild, message, embed):
+        try:
+            await message.edit(embed=embed, suppress=False)
+        except (discord.HTTPException):
+            self.cache[guild.id]["waiting"] = True
+            message = await channel.send(embed=embed)
+            await self.config.guild(guild).message.set(message.id)
+            self.cache[guild.id]["message"] = message
+        return message
+
+
+
+
+
+
+
+
+
+
+
+    # def attrs_cooldown_field(bot_id, text):
+    #     index = BOTS[bot_id]["index"]
+    #     field = {
+    #         'name': "**`" + BOTS[bot_id]["command"] + "`**", 
+    #         'value': text, 
+    #         'inline': True
+    #     }
+    #     return index, field
+
+    # async def set_config(self, guild, *key, value):
+    #     await self.config.guild(guild).set_raw(*key, value=getattr(value, "id", default=value))
+    #     set_in_dict(self.cache[guild.id], key, value)
+
+    async def process_cooldowns(self, guild, embed, channel): # TODO Обдумать
         bots = self.cache[guild.id]["bots"]
         cooldowns = get_cooldowns(bots)
         for bot_id in cooldowns:
             cooldown = cooldowns[bot_id]
+
             if cooldown <= 0:
                 text = box(f"+ {MSG_READY:12}", lang="diff")
-                finished += 1
+                await overwrite_send_messages(guild, channel, None)
                 del bots[bot_id]
             else:
                 human_time = formatted_naturaldelta(cooldown)
                 text = box(f"{human_time:14}", lang="py")
-            name = "**`" + BOTS[bot_id]["command"] + "`**"
 
-            index = BOTS[bot_id]["index"]
-            embed._fields[index] = {'name': name, 'value': text, 'inline': True}
-        return bool(finished)
-
+            #embed._fields[index] = value
+            setattr(embed._fields, *attrs_cooldown_field(bot_id, text))
+    
     async def update_message(self, guild, *attrvalue):
         message = self.cache[guild.id]["message"]
         embed = get_embed(message)
         for attr, value in attrvalue:
             setattr(embed, attr, value)
 
-        if await self.process_cooldowns(guild, embed):
-            await overwrite_send_messages(guild, message.channel, None)
-        message = await self._edit_message(guild, message, embed)
+        await self.process_cooldowns(guild, embed, message.channel)
+
+        message = await self.safe_edit_message(guild, message, embed)
         self.restart_task(guild, message)
-
-    async def create_message(self, guild, channel):
-        embed = discord.Embed()
-        storage = await self.config.guild(guild).balance()
-        if storage:
-            embed.description = get_leaderboard(guild, storage)
-
-        #embed.add_field("Требуется регистрация бамп ботов.", "Н")
-        message = await self._send_message(guild, channel, embed)
-        self.create_task(guild, message)
 
     async def message_task(self, guild, message):
         embed = get_embed(message)
         while self.cache[guild.id]["bots"]:
             await asyncio.sleep(DELAY)
 
-            if await self.process_cooldowns(guild, embed):
-                await overwrite_send_messages(guild, message.channel, None)
-            message = await self._edit_message(guild, message, embed)      
+            await self.process_cooldowns(guild, embed, message.channel)
 
-    async def _edit_message(self, guild, message, embed):
-        try:
-            await message.edit(embed=embed, suppress=False)
-        except (discord.HTTPException):
-            message = await self._send_message(guild, message.channel, embed)
-        return message
-
-    async def _send_message(self, guild, channel, embed):
-        self.cache[guild.id]["waiting"] = True
-        message = await channel.send(embed=embed)
-        await self.config.guild(guild).message.set(message.id) # TODO Сохранение в кеш
-        return message
-
-
-    def create_task(self, guild, message):
-        task = self.bot.loop.create_task(self.message_task(guild, message))
-        self.cache[guild.id]["task"] = task
-
-    def restart_task(self, guild, message):
-        self.cache[guild.id]["task"].cancel()
-        self.create_task(guild, message)
+            message = await self.safe_edit_message(guild, message, embed)      
 
 
 
 
 
-    # async def create_cache(self, guild, channel, bots, message = None):
-    #     self.cache[guild.id] = {
-    #         "message": message,
 
-    #         "bots": get_end_dates(bots), # TODO Списка бота нету изначально
-    #         "captchas": dict.fromkeys(bots, []),
-    #         "task": None,
 
-    #         "waiting": False
-    #         #self.bot.loop.create_task(self.message_task(guild))
-    #     }
 
-    async def create_cache(self, guild, channel, bots, message = None):
-        self.cache[guild.id] = {
-            "message": message,
 
-            "bots": {},
-            "captchas": {},
-            "task": None,
-
-            "waiting": False
-            #self.bot.loop.create_task(self.message_task(guild))
-        }
 
 
     # async def update_time(self, guild, bot_id, hours=0, minutes=0, seconds=0):
     #     await self.config.guild(guild).set_raw("bots", bot_id, value=get_end_date(hours, minutes, seconds))
     #     self.cache[guild.id]["cooldowns"][bot_id] = (hours * 60 + minutes) * 60 + seconds
-
-
-
-
-
-
-
-
 
     # @commands.Cog.listener()
     # async def on_message(self, ctx):
@@ -315,7 +335,7 @@ class BumpReward(commands.Cog):
 
     #     author = ctx.author
     #     if author.bot:
-    #         if author == self.bot.user and self.cache[guild.id]["waiting"]:
+    #         if self.cache[guild.id]["waiting"]:
     #             self.cache[guild.id]["waiting"] = False
     #             return
 
@@ -337,21 +357,21 @@ class BumpReward(commands.Cog):
     #                         await self.change_balance(guild, user, reward)
     #                         footer = {"text": user.display_name, "icon_url": user.avatar_url}
     #                     else:
-    #                         log.error("Bot_ID: %s\nUnable to parse a user: %s" % (bot_id, [])) # TODO Все сообщение, а не только embed
+    #                         log.error(f"Bot_ID: {bot_id}\nUnable to parse a user: {get_full_content(ctx)}")
     #                         footer = {"text": MSG_UNKOWN_USER}
 
     #                     cooldown = await self.config.guild(guild).cooldown()
-    #                     #await self.update_time(guild, bot_id, minutes=cooldown)
+    #                     #await self.update_time(guild, bot_id, minutes=cooldown) # TODO Доделать
     #                     await self.update_message(guild, ("_footer", footer))
 
     #                 elif msg_type == "cooldown":
-    #                     #await self.update_time(guild, bot_id, *[int(x) for x in result])
+    #                     #await self.update_time(guild, bot_id, *[int(x) for x in result]) # TODO Доделать
     #                     await self.update_message(guild)
 
-    #                 #await channel_send_messages(guild, channel, False)
+    #                 #await channel_send_messages(guild, channel, False)  # TODO Доделать
 
     #             except UnknownType:
-    #                 log.critical("Bot_ID: %s\nEncountered unknown message type: %s" % (bot_id, [])) # TODO Все сообщение, а не только embed
+    #                 log.critical(f"Bot_ID: {bot_id}\nEncountered unknown message type: {get_full_content(ctx)}")
     #                 await safe_message_delete(ctx, delay=15)
     #                 return
 
@@ -359,21 +379,3 @@ class BumpReward(commands.Cog):
 
 
 
-    # async def init(self):
-    #     await self.bot.wait_until_ready()
-    #     for guild in self.bot.guilds:
-    #         config = await self.config.guild(guild)()
-        
-    #         channel_id = config["channel"]
-    #         if channel_id is None:
-    #             continue
-
-    #         channel = guild.get_channel(channel_id)
-    #         if channel is None:
-    #             await self.config.guild(guild).channel.set(None)
-    #             await self.config.guild(guild).message.set(None)
-    #         else:
-    #             message = await get_message(channel, config["message"])
-    #             await clear_channel(guild, channel, message)
-
-    #             self.create_task(guild, config["bots"], channel, message)

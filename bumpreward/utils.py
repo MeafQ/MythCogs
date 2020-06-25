@@ -43,12 +43,12 @@ def get_leaderboard(guild, storage, author=None, page=10, full=False):
     return pages, author_page
 
 
-def get_end_date(hours=0, minutes=0, seconds=0):
-    time = timedelta(hours=hours, minutes=minutes, seconds=seconds)
-    now = datetime.now()
-    end_date = now + time
-    formatted = datetime.strftime(end_date, '%Y/%m/%d %H:%M:%S')
-    return formatted
+# def get_end_date(hours=0, minutes=0, seconds=0):
+#     time = timedelta(hours=hours, minutes=minutes, seconds=seconds)
+#     now = datetime.now()
+#     end_date = now + time
+#     formatted = datetime.strftime(end_date, '%Y/%m/%d %H:%M:%S')
+#     return formatted
 
 def get_cooldowns(bots):
     temp = {}
@@ -58,25 +58,31 @@ def get_cooldowns(bots):
         temp[bot_id] = time_left.total_seconds()
     return temp
 
-def get_end_dates(bots):
+def strptime_dates(bots):
     for bot_id, end_date in bots.items():
         bots[bot_id] = datetime.strptime(end_date, '%Y/%m/%d %H:%M:%S')
     return bots
 
-def get_from_dict(data_dict, map_list):
-    try:
-        return reduce(operator.getitem, map_list, data_dict)
-    except KeyError:
-        return None
-
-def set_in_dict(data_dict, map_list, value):
-    get_from_dict(data_dict, map_list[:-1])[map_list[-1]] = value
+def formatted_naturaldelta(cooldown):
+    human_time = humanize.naturaldelta(max(cooldown % 3600, 60))
+    if (cooldown // 3600) >= 1:
+        human_time = humanize.naturaldelta(cooldown) + " " + human_time
+    return human_time
 
 async def add_reaction(ctx, emoji = "✅"):
     try:
         await ctx.message.add_reaction(emoji)
     except discord.NotFound:
         pass
+
+def set_in_dict(data_dict, map_list, value):
+    get_from_dict(data_dict, map_list[:-1])[map_list[-1]] = value
+
+def get_from_dict(data_dict, map_list):
+    try:
+        return reduce(operator.getitem, map_list, data_dict)
+    except KeyError:
+        return None
 
 def get_message_type(ctx, bot_id):
     embed = get_embed(ctx)
@@ -94,25 +100,26 @@ def get_message_type(ctx, bot_id):
                     return key, result.groups()
     raise UnknownType
 
-def formatted_naturaldelta(cooldown):
-    human_time = humanize.naturaldelta(max(cooldown % 3600, 60))
-    if (cooldown // 3600) >= 1:
-        human_time = humanize.naturaldelta(cooldown) + " " + human_time
-    return human_time
-
 def get_embed(message):
     embeds = message.embeds
     if embeds:
         return embeds[0]
     return None
 
-def get_member(guild, string):
+def get_full_content(message):
+    content = message.content
+    embed = get_embed(message)
+    if embed is not None:
+        content += "\n" + embed
+    return content
+
+def combined_get_member(guild, string):
     try:
         return guild.get_member(int(string))
     except ValueError:
         return guild.get_member_named(string)
 
-async def get_message(channel, message_id):
+async def safe_get_message(channel, message_id):
     if message_id is not None:
         try:
             return await channel.fetch_message(message_id)
@@ -120,7 +127,13 @@ async def get_message(channel, message_id):
             pass
     return None
 
-async def clear_channel(guild, channel, message):
+async def safe_message_delete(message, delay=None):
+    try:
+        await message.delete(delay=delay)
+    except discord.NotFound:
+        pass
+
+async def clear_channel(channel, message):
     def is_not_msg(m):
         return m != message
     try:
@@ -132,16 +145,11 @@ async def send_simple_embed(channel, text):
     embed = discord.Embed(description=text)
     await channel.send(embed=embed)
 
-async def safe_message_delete(message, delay=None):
-    try:
-        await message.delete(delay=delay)
-    except discord.NotFound:
-        pass
-
 async def overwrite_send_messages(guild, channel, lock):
     overwrite = channel.overwrites_for(guild.default_role)
-    overwrite.send_messages = lock
-    await channel.set_permissions(guild.default_role, overwrite=overwrite)
+    if overwrite.send_messages != lock:
+        overwrite.send_messages = lock
+        await channel.set_permissions(guild.default_role, overwrite=overwrite)
 
 class UnknownType(Exception):
     pass
