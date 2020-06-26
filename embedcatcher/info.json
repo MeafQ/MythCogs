@@ -1,8 +1,0 @@
-{
-    "author" : ["MeafQ"],
-    "install_msg" : "**Тестовый модуль без команд.**",
-    "name" : "EmbedCatcher",
-    "short" : "Тестовый модуль без команд.",
-    "description" : "Тестовый модуль без команд.",
-    "tags" : ["test", "bump"]
-}
