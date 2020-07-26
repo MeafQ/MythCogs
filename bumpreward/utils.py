@@ -51,12 +51,16 @@ def get_leaderboard(guild, storage, author=None, page=10, full=False):
 #     return formatted
 
 def get_cooldowns(bots):
-    temp = {}
+    fin = {}
+    unfin = {}
     for bot_id, end_date in bots.items():
         now = datetime.now()
-        time_left = end_date - now
-        temp[bot_id] = time_left.total_seconds()
-    return temp
+        seconds_left = (end_date - now).total_seconds()
+        if seconds_left <= 0:
+            fin[bot_id] = seconds_left
+        else:
+            unfin[bot_id] = seconds_left
+    return fin, unfin
 
 def strptime_dates(bots):
     for bot_id, end_date in bots.items():

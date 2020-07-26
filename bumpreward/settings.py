@@ -6,6 +6,14 @@ NAME_PATTERN = re.compile(r'(.+?#\d{4})')
 DELAY = 60
 CAPTCHA_DELAY = 15
 
+MSG_UNKOWN_USER = "⛔ Неизвестный пользователь"
+MSG_READY = "Готово"
+MSG_NO_DATA = "Нет данных"
+MSG_NO_BOTS = "Нет поддерживаемых ботов."
+MSG_NO_CHANNEL = "Не создан специальный канал."
+MSG_LESS_ONE = "Размер награды не может быть меньше единицы."
+MSG_NO_LEADERBOARD = "Нет пользователей в базе данных."
+
 BOTS = {
     "315926021457051650": {
         "index": 1,

@@ -8,9 +8,6 @@ from redbot.core.utils.menus import menu, DEFAULT_CONTROLS
 from redbot.core.bot import Red
 import logging
 import humanize
-from .utils import *
-from .settings import *
-
 
 log = logging.getLogger("red.mythcogs.bumpreward")
 
@@ -20,16 +17,7 @@ DEFAULT_GUILD = {
     "bots": {},
     "amount": 1,
     "balance": []
-}
-
-MSG_UNKOWN_USER = "⛔ Неизвестный пользователь"
-MSG_READY = "Готово"
-MSG_NO_DATA = "Нет данных"
-MSG_NO_BOTS = "Нет поддерживаемых ботов."
-MSG_NO_CHANNEL = "Не создан специальный канал."
-MSG_LESS_ONE = "Размер награды не может быть меньше единицы."
-MSG_NO_LEADERBOARD = "Нет пользователей в базе данных."
-    
+}   
 
 class BumpReward(commands.Cog):
     """
@@ -154,8 +142,7 @@ class BumpReward(commands.Cog):
             "captchas": dict.fromkeys(bots, []),
             "task": self.bot.loop.create_task(self.message_task(guild, message)),
 
-            "waiting": False,
-            "lock": False
+            "waiting": False
         }
 
     def stop_task(self, guild):
@@ -238,7 +225,7 @@ class BumpReward(commands.Cog):
         self.start_task(guild, message, bots)
         return message
 
-    async def safe_edit_message(self, guild, message, embed):
+    async def safe_edit_message(self, guild, message, embed, finished):
         try:
             await message.edit(embed=embed, suppress=False)
         except (discord.HTTPException):
@@ -246,6 +233,10 @@ class BumpReward(commands.Cog):
             message = await channel.send(embed=embed)
             await self.config.guild(guild).message.set(message.id)
             self.cache[guild.id]["message"] = message
+        if finished:
+            await overwrite_send_messages(guild, message.channel, None)
+            for bot_id in finished:
+                del self.cache[guild.id]["bots"][bot_id]
         return message
 
 
@@ -258,6 +249,17 @@ class BumpReward(commands.Cog):
 
 
 
+
+    # def update_embed_fields(self, embed, cooldowns):
+    #     for bot_id in finished:
+    #         text = box(f"+ {MSG_READY:12}", lang="diff")
+    #         setattr(embed._fields, *attrs_cooldown_field(bot_id, text))
+
+    #     for bot_id in unfinished:
+    #         human_time = formatted_naturaldelta(unfinished[bot_id])
+    #         text = box(f"{human_time:14}", lang="py")
+    #         setattr(embed._fields, *attrs_cooldown_field(bot_id, text))
+
     # def attrs_cooldown_field(bot_id, text):
     #     index = BOTS[bot_id]["index"]
     #     field = {
@@ -267,36 +269,19 @@ class BumpReward(commands.Cog):
     #     }
     #     return index, field
 
-    # async def set_config(self, guild, *key, value):
-    #     await self.config.guild(guild).set_raw(*key, value=getattr(value, "id", default=value))
-    #     set_in_dict(self.cache[guild.id], key, value)
-
-    async def process_cooldowns(self, guild, embed, channel): # TODO Обдумать
-        bots = self.cache[guild.id]["bots"]
-        cooldowns = get_cooldowns(bots)
-        for bot_id in cooldowns:
-            cooldown = cooldowns[bot_id]
-
-            if cooldown <= 0:
-                text = box(f"+ {MSG_READY:12}", lang="diff")
-                await overwrite_send_messages(guild, channel, None)
-                del bots[bot_id]
-            else:
-                human_time = formatted_naturaldelta(cooldown)
-                text = box(f"{human_time:14}", lang="py")
-
-            #embed._fields[index] = value
-            setattr(embed._fields, *attrs_cooldown_field(bot_id, text))
     
     async def update_message(self, guild, *attrvalue):
         message = self.cache[guild.id]["message"]
-        embed = get_embed(message)
+
+        embed = get_embed(message)          # TODO Обдумать что с чем объединить
+        bots = self.cache[guild.id]["bots"]
+        finished, unfinished = get_cooldowns(bots)
+        update_embed_fields(embed, finished, unfinished)
+
         for attr, value in attrvalue:
             setattr(embed, attr, value)
 
-        await self.process_cooldowns(guild, embed, message.channel)
-
-        message = await self.safe_edit_message(guild, message, embed)
+        message = await self.safe_edit_message(guild, message, embed, finished)
         self.restart_task(guild, message)
 
     async def message_task(self, guild, message):
@@ -304,11 +289,9 @@ class BumpReward(commands.Cog):
         while self.cache[guild.id]["bots"]:
             await asyncio.sleep(DELAY)
 
-            await self.process_cooldowns(guild, embed, message.channel)
+            finished, unfinished = get_cooldowns(bots)
 
-            message = await self.safe_edit_message(guild, message, embed)      
-
-
+            message = await self.safe_edit_message(guild, message, embed, finished)   
 
 
 
@@ -317,6 +300,10 @@ class BumpReward(commands.Cog):
 
 
 
+
+    # async def set_config(self, guild, *key, value):
+    #     await self.config.guild(guild).set_raw(*key, value=getattr(value, "id", default=value))
+    #     set_in_dict(self.cache[guild.id], key, value)
 
     # async def update_time(self, guild, bot_id, hours=0, minutes=0, seconds=0):
     #     await self.config.guild(guild).set_raw("bots", bot_id, value=get_end_date(hours, minutes, seconds))
