@@ -26,8 +26,8 @@ def get_leaderboard(guild, storage, author=None, page=10, first=False):
                 continue
             name = user.display_name
         else:
-            author_page = i-1 // 10
-            name = f"<<{author.display_name}>>"
+            author_page = (i-1) // 10
+            name = f"<{author.display_name}>"
 
         temp_page += f"{f'{i}.': <{pound_len + 3}} {balance: <{balance_len + 4}} {name}\n"
 
